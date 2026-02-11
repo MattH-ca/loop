@@ -1,0 +1,78 @@
+{
+  "project": "MyApp",
+  "branchName": "loop/task-priority",
+  "description": "Task Priority System - Add priority levels to tasks",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add priority field to database",
+      "description": "As a developer, I need to store task priority so it persists across sessions.",
+      "acceptanceCriteria": [
+        "Add priority column to tasks table: 'high' | 'medium' | 'low' (default 'medium')",
+        "Generate and run migration successfully",
+        "Typecheck passes"
+      ],
+      "references": [
+        "loop-output/spec-2025-06-15T15-00-00Z.md#data-model"
+      ],
+      "notes": "Use Drizzle pgEnum for priority column. See spec data model section.",
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "US-002",
+      "title": "Display priority indicator on task cards",
+      "description": "As a user, I want to see task priority at a glance.",
+      "acceptanceCriteria": [
+        "Each task card shows colored priority badge (red=high, yellow=medium, gray=low)",
+        "Priority visible without hovering or clicking",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "references": [
+        "loop-output/spec-2025-06-15T15-00-00Z.md#component-structure"
+      ],
+      "notes": "Follow existing Card component pattern. PriorityBadge goes in components/tasks/.",
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "US-003",
+      "title": "Add priority selector to task edit",
+      "description": "As a user, I want to change a task's priority when editing it.",
+      "acceptanceCriteria": [
+        "Priority dropdown in task edit modal",
+        "Shows current priority as selected",
+        "Saves immediately on selection change",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "references": [
+        "loop-output/spec-2025-06-15T15-00-00Z.md#api-contracts",
+        "loop-output/spec-2025-06-15T15-00-00Z.md#component-structure"
+      ],
+      "notes": "Use PATCH endpoint for priority updates. PriorityDropdown component.",
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "US-004",
+      "title": "Filter tasks by priority",
+      "description": "As a user, I want to filter the task list to see only high-priority items.",
+      "acceptanceCriteria": [
+        "Filter dropdown with options: All | High | Medium | Low",
+        "Filter persists in URL params",
+        "Empty state message when no tasks match filter",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "references": [
+        "loop-output/spec-2025-06-15T15-00-00Z.md#component-structure",
+        "loop-output/spec-2025-06-15T15-00-00Z.md#state-management"
+      ],
+      "notes": "Use URL search params for filter state. See spec state management section.",
+      "priority": 4,
+      "passes": false
+    }
+  ]
+}

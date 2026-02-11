@@ -1,0 +1,13 @@
+.DS_Store
+
+# Local Claude Code config
+.claude/data/
+.claude/settings.local.json
+
+# Generated during use
+logs/
+loop-output/
+skill-concepts/
+archive/
+progress.txt
+.last-branch
