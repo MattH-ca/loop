@@ -66,7 +66,7 @@ flowchart TD
 |---|-------|------|-------|--------|
 | 1 | `loop-idea` | Interactive | Your rough idea | `loop-output/concept-[timestamp].md` |
 | 2 | `loop-prd` | Interactive | Concept doc + your answers | `loop-output/prd-[timestamp].md` |
-| 3 | `loop-spec` | Interactive → Autonomous | PRD + codebase + research | `loop-output/spec-[timestamp].md` |
+| 3 | `loop-spec` | Interactive → Research → Output | PRD + codebase + research | `loop-output/spec-[timestamp].md` |
 | 4 | `loop-task` | Autonomous | PRD + spec | `loop-output/prd-[timestamp].json` |
 
 ### Skill 1: `loop-idea` — Brainstorm
@@ -144,7 +144,7 @@ When `loop.sh` detects a different `branchName` than the last run, it archives t
 
 ---
 
-## Post-Execution: `loop-evaluate`
+## Post-Execution: Skill 6 — `loop-evaluate`
 
 | # | Skill | Mode | Input | Output |
 |---|-------|------|-------|--------|
@@ -237,12 +237,20 @@ Each artifact is immutable once created. The timestamp preserves the order and t
 
 ```
 loop/
+├── .claude/skills/                    # Skill definitions (the design pipeline)
+│   ├── loop-idea/SKILL.md            # Skill 1: brainstorm → concept
+│   ├── loop-prd/SKILL.md             # Skill 2: concept → PRD
+│   ├── loop-spec/SKILL.md            # Skill 3: PRD → spec (with research)
+│   ├── loop-task/SKILL.md            # Skill 4: PRD + spec → prd.json
+│   └── loop-evaluate/SKILL.md        # Skill 6: post-execution audit
 ├── CLAUDE.md              # Agent instructions — the prompt each iteration receives
 ├── README.md              # This file
 ├── loop.sh                # Execution loop — spawns Claude Code per iteration
-├── prompt.md              # Agent instruction template (source for CLAUDE.md)
+├── loop-bash-prompt.md    # Agent instruction template for Skill 5 (sandbox execution)
 ├── prd.json.example       # Example prd.json for reference
 ├── loop-flowchart.md      # Mermaid flowchart of the full pipeline
 └── .gitignore
 ```
+
+> **Note on skill numbering:** Skill 5 (`loop-bash`) is a planned feature for spawning multiple Claude Code instances in parallel sandboxes (Proxmox-based). It's in development on a separate branch. Skills are numbered to preserve ordering once it ships.
 

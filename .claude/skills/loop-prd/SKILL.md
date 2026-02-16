@@ -145,7 +145,7 @@ Be explicit and unambiguous.
 ### 6. Non-Goals (Out of Scope)
 What this feature will NOT include. Critical for managing scope.
 
-### 87. Success Metrics
+### 7. Success Metrics
 How will success be measured? (Absorbed from concept's "what good looks like" if available.)
 
 ### 8. Open Questions
