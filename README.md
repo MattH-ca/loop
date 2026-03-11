@@ -14,48 +14,55 @@ After execution, an optional evaluation skill audits the implementation against 
 
 ```mermaid
 flowchart TD
-    A["1. loop-idea<br/>Brainstorm → concept.md"]
-    B["2. loop-prd<br/>Concept → prd.md"]
-    C["3. loop-spec<br/>PRD → spec.md<br/>(with embedded research)"]
-    D["4. loop-task<br/>PRD + Spec → prd.json"]
-    E["Run loop.sh<br/>Starts autonomous execution"]
-    F["Claude Code picks a story<br/>Finds next passes: false"]
-    G["Implements it<br/>Writes code, runs quality gates"]
-    H["Commits changes<br/>If checks pass"]
-    I["Updates prd.json<br/>Sets passes: true"]
-    J["Logs to progress.txt<br/>Saves learnings"]
-    K{"More stories?"}
-    L["Done!<br/>All stories complete"]
+    subgraph design["Design Phase — Interactive"]
+        A["↻ 1. loop-idea<br/>→ concept.md"]
+        B["↻ 2. loop-prd<br/>→ prd.md"]
+        C["↻ 3. loop-spec<br/>→ spec.md"]
+        D["↻ 4. loop-task<br/>→ prd.json"]
+        A --> B --> C --> D
+    end
 
-    A -- "satisfied" --> B
-    A -- "refine<br/>(0A→0B→...)" --> A
-    B -- "satisfied" --> C
-    B -- "refine<br/>(0A→0B→...)" --> B
-    C -- "satisfied" --> D
-    C -- "refine<br/>(0A→0B→...)" --> C
-    D -- "satisfied" --> E
-    D -- "refine<br/>(0A→0B→...)" --> D
-    E --> F --> G --> H --> I --> J --> K
+    NOTE["↻ = refine before advancing<br/>Each step writes new revisions:<br/>0A → 0B → 0C"]
+    B -.- NOTE
+
+    subgraph exec["Execution Phase — Autonomous"]
+        E["Run loop.sh"]
+        F["Pick next story"]
+        G["Implement + quality gates"]
+        H["Commit, mark passes: true"]
+        I["Log learnings"]
+        K{"More stories?"}
+    end
+
+    subgraph eval["Evaluation Phase — Post-Execution"]
+        M["6. loop-evaluate<br/>Audit spec vs code"]
+        N["Closing report + score"]
+        O{"Promote?"}
+        P["finalspec.md"]
+    end
+
+    D --> E
+    E --> F --> G --> H --> I --> K
     K -- "Yes" --> F
-    K -- "No" --> L
-
-    CHAIN["Each skill chains from the<br/>highest-revision prior artifact<br/>in loop-output/"]
-    LEARN["Executing agents append learnings<br/>to notes and update CLAUDE.md<br/>with patterns discovered"]
-
-    B -.- CHAIN
-    J -.- LEARN
+    K -- "No" --> L["All stories complete"]
+    L -.-> M
+    M --> N --> O
+    O -- "Yes" --> P
+    O -- "No" --> Q["Fix in next cycle"]
 
     classDef blue fill:#dbeafe,stroke:#93c5fd,color:#1e3a5f
     classDef gray fill:#f3f4f6,stroke:#d1d5db,color:#374151
     classDef yellow fill:#fef9c3,stroke:#fde68a,color:#713f12
     classDef green fill:#d1fae5,stroke:#6ee7b7,color:#065f46
-    classDef note fill:#fff,stroke:#fca5a5,stroke-dasharray:5 5,color:#991b1b
+    classDef orange fill:#ffedd5,stroke:#fdba74,color:#7c2d12
+    classDef note fill:#f8fafc,stroke:#94a3b8,stroke-dasharray:5 5,color:#475569
 
-    class A,B,C,D,E blue
-    class F,G,H,I,J gray
-    class K yellow
-    class L green
-    class CHAIN,LEARN note
+    class A,B,C,D blue
+    class E,F,G,H,I gray
+    class K,O yellow
+    class L,P green
+    class M,N,Q orange
+    class NOTE note
 ```
 
 ---
