@@ -6,7 +6,7 @@ An autonomous AI coding agent pipeline built on Claude Code. You describe what y
 
 Loop has two phases: **design** (you + AI collaborating) and **execution** (AI working autonomously).
 
-During design, you walk through 4 interactive skills that progressively refine a raw idea into an implementation-ready task list. Each skill produces a timestamped artifact in `loop-output/` and automatically chains into the next — it finds the most recent prior artifact and asks you to confirm.
+During design, you walk through 4 interactive skills that progressively refine a raw idea into an implementation-ready task list. Each skill produces a revisioned artifact in `loop-output/` and can iterate on itself — refining the document into successive minor revisions (0A → 0B → 0C) before you move on. When you're satisfied, the next skill chains forward by finding the highest-revision prior artifact and asking you to confirm.
 
 During execution, `loop.sh` spawns Claude Code in a headless loop. Each iteration picks up the next unfinished user story from `prd.json`, implements it, runs quality checks, commits, marks the story as done, and logs what it learned. The next iteration reads those learnings before starting. When every story passes, the loop stops.
 
@@ -27,11 +27,19 @@ flowchart TD
     K{"More stories?"}
     L["Done!<br/>All stories complete"]
 
-    A --> B --> C --> D --> E --> F --> G --> H --> I --> J --> K
+    A -- "satisfied" --> B
+    A -- "refine<br/>(0A→0B→...)" --> A
+    B -- "satisfied" --> C
+    B -- "refine<br/>(0A→0B→...)" --> B
+    C -- "satisfied" --> D
+    C -- "refine<br/>(0A→0B→...)" --> C
+    D -- "satisfied" --> E
+    D -- "refine<br/>(0A→0B→...)" --> D
+    E --> F --> G --> H --> I --> J --> K
     K -- "Yes" --> F
     K -- "No" --> L
 
-    CHAIN["Each skill chains from the<br/>previous artifact in loop-output/<br/>via input chaining"]
+    CHAIN["Each skill chains from the<br/>highest-revision prior artifact<br/>in loop-output/"]
     LEARN["Executing agents append learnings<br/>to notes and update CLAUDE.md<br/>with patterns discovered"]
 
     B -.- CHAIN
@@ -62,24 +70,30 @@ flowchart TD
 
 ## The Pipeline: Design Phase
 
+Each design skill can **iterate on itself** — if you want changes, the skill writes a new minor revision (0A → 0B → 0C) rather than overwriting. When you're satisfied, move to the next skill.
+
 | # | Skill | Mode | Input | Output |
 |---|-------|------|-------|--------|
-| 1 | `loop-idea` | Interactive | Your rough idea | `loop-output/[slug]-concept-0A.md` |
-| 2 | `loop-prd` | Interactive | Concept doc + your answers | `loop-output/[slug]-prd-0A.md` |
-| 3 | `loop-spec` | Interactive → Research → Output | PRD + codebase + research | `loop-output/[slug]-spec-0A.md` |
-| 4 | `loop-task` | Autonomous | PRD + spec | `loop-output/[slug]-prd-0A.json` |
+| 1 | `loop-idea` | Interactive | Your rough idea | `[slug]-concept-[rev].md` |
+| 2 | `loop-prd` | Interactive | Highest-rev concept + your answers | `[slug]-prd-[rev].md` |
+| 3 | `loop-spec` | Interactive → Research → Output | Highest-rev PRD + codebase + research | `[slug]-spec-[rev].md` |
+| 4 | `loop-task` | Autonomous | Highest-rev PRD + spec | `[slug]-prd-[rev].json` |
 
 ### Skill 1: `loop-idea` — Brainstorm
 
-Turns a vague idea into a clear concept document through guided dialogue. The agent asks 6–7 focused questions — one at a time, with multiple-choice options when helpful — covering the core concept, problem, audience, distinctiveness, and trade-offs. You end up with a plain-English document that anyone can read.
+Turns a vague idea into a clear concept document through guided dialogue. The agent asks 6–7 focused questions — one at a time, with multiple-choice options when helpful — covering the core concept, problem, audience, distinctiveness, and trade-offs. You end up with a plain-English document that anyone can read. This skill also creates the **slug** — a short kebab-case identifier (e.g., `draft-feedback`) that becomes the permanent name for all artifacts in the pipeline.
 
-**Output:** `loop-output/[slug]-concept-0A.md` (e.g., `draft-feedback-concept-0A.md`)
+If you want refinements, the agent writes a new revision (e.g., `0A` → `0B`) rather than editing the original.
+
+**Output:** `loop-output/[slug]-concept-[rev].md` (e.g., `draft-feedback-concept-0A.md`)
 
 ### Skill 2: `loop-prd` — Product Requirements
 
-Creates a structured Product Requirements Document. Picks up the concept doc if one exists, then asks iterative questions about goals, scope, timeline, constraints, success metrics, and quality gate intent. The quality gate question is required — it captures what standards every story must meet (type checking, linting, tests, visual verification) without specifying exact commands yet.
+Creates a structured Product Requirements Document. Chains from the highest-revision concept doc, then asks iterative questions about goals, scope, timeline, constraints, success metrics, and quality gate intent. The quality gate question is required — it captures what standards every story must meet (type checking, linting, tests, visual verification) without specifying exact commands yet.
 
-**Output:** `loop-output/[slug]-prd-0A.md` (e.g., `draft-feedback-prd-0A.md`) with user stories, acceptance criteria, functional requirements, and quality gate intent.
+If you want refinements, the agent writes a new revision. The next skill will automatically pick up whichever revision is highest.
+
+**Output:** `loop-output/[slug]-prd-[rev].md` (e.g., `draft-feedback-prd-0A.md`) with user stories, acceptance criteria, functional requirements, and quality gate intent.
 
 ### Skill 3: `loop-spec` — Technical Specification
 
@@ -89,7 +103,9 @@ Transforms the PRD into a technical implementation spec. Runs in three phases:
 2. **Autonomous research** — Uses the Context7 MCP server to query live library documentation and web search to validate technical decisions. Finds current best practices, version-specific patterns, and integration approaches.
 3. **Output** — Produces a spec with architecture, data models, API contracts, component structure, error handling, testing strategy, and security considerations. Research findings are embedded inline (no separate research doc). Quality gate intent from the PRD gets translated into specific commands for the project's tech stack (e.g., "must pass type checking" → `pnpm typecheck`).
 
-**Output:** `loop-output/[slug]-spec-0A.md` (e.g., `draft-feedback-spec-0A.md`)
+If you want refinements, the agent writes a new revision.
+
+**Output:** `loop-output/[slug]-spec-[rev].md` (e.g., `draft-feedback-spec-0A.md`)
 
 ### Skill 4: `loop-task` — Task Conversion
 
@@ -102,7 +118,9 @@ Converts the PRD + spec into the `prd.json` format that `loop.sh` consumes. Each
 
 The key constraint: each story must be completable in **one Loop iteration** (one context window). If a story is too big, the agent runs out of context before finishing. Rule of thumb: if you can't describe the change in 2–3 sentences, split it.
 
-**Output:** `loop-output/[slug]-prd-0A.json` (e.g., `draft-feedback-prd-0A.json`)
+If you want refinements, the agent writes a new revision.
+
+**Output:** `loop-output/[slug]-prd-[rev].json` (e.g., `draft-feedback-prd-0A.json`)
 
 ---
 
@@ -181,21 +199,53 @@ Deviations are classified: **Match**, **Enhancement** (agent added beyond spec �
 
 ---
 
+## Revision Naming System
+
+All artifacts use the same naming convention: `[slug]-[artifact]-[major][minor].[ext]`
+
+| Component | Description | Example |
+|-----------|-------------|---------|
+| **Slug** | 2–4 kebab-case words describing the idea. Created once during `loop-idea`, inherited by every downstream artifact. | `draft-feedback`, `task-status` |
+| **Artifact** | The document type. | `concept`, `prd`, `spec`, `closing-report`, `finalspec` |
+| **Major** | A number starting at `0`. Only bumped on explicit user request. | `0`, `1` |
+| **Minor** | An uppercase letter starting at `A`. Incremented each time a skill refines the document. | `A`, `B`, `C` |
+
+### How revisions work
+
+Each design skill can **iterate on itself**. When you ask for changes, the skill writes a new file with the next minor revision — it never overwrites the previous one. All revisions are kept in `loop-output/`:
+
+```
+loop-output/
+├── draft-feedback-concept-0A.md    # First concept draft
+├── draft-feedback-concept-0B.md    # Refined after feedback
+├── draft-feedback-prd-0A.md        # PRD from concept 0B
+├── draft-feedback-prd-0B.md        # PRD refined once
+├── draft-feedback-spec-0A.md       # Spec from PRD 0B
+├── draft-feedback-prd-0A.json      # Executable tasks from spec 0A
+```
+
+**Key rules:**
+- **Immutable files** — once a revision is written, it is never modified. Refinements produce a new file.
+- **Minor revisions** go A → B → C → ... → Z within a major version.
+- **Major revision bumps** (e.g., `0Z` → `1A`) only happen when the user explicitly requests one.
+- **Input chaining** — each skill finds the highest-revision prior artifact automatically. If `concept-0B` and `concept-0A` both exist, the PRD skill picks `0B`.
+- **Slug inheritance** — the slug is set once at the concept stage and carried through the entire pipeline. Downstream skills never create new slugs.
+
 ## Artifact Chain
 
 A complete Loop run produces these artifacts in `loop-output/`:
 
 ```
 loop-output/
-├── task-status-concept-0A.md                  # Skill 1: idea → concept
-├── task-status-prd-0A.md                     # Skill 2: concept → PRD
-├── task-status-spec-0A.md                    # Skill 3: PRD → spec
-├── task-status-prd-0A.json                   # Skill 4: spec → executable tasks
-├── task-status-closing-report-0A.md          # Skill 6: post-execution report
-└── task-status-finalspec-0A.md               # Skill 6: promoted spec (if audit passes)
+├── [slug]-concept-[rev].md              # Skill 1: idea → concept
+├── [slug]-prd-[rev].md                  # Skill 2: concept → PRD
+├── [slug]-spec-[rev].md                 # Skill 3: PRD → spec
+├── [slug]-prd-[rev].json               # Skill 4: spec → executable tasks
+├── [slug]-closing-report-[rev].md       # Skill 6: post-execution report
+└── [slug]-finalspec-[rev].md            # Skill 6: promoted spec (if audit passes)
 ```
 
-Each artifact is immutable once created. The timestamp preserves the order and traceability. The `finalspec` timestamp matches its source spec (not the evaluation date) so you can always trace back.
+Each artifact is immutable once created. The revision suffix preserves the order and traceability. Multiple revisions of the same artifact type can coexist — each is a snapshot of the document at that stage of refinement.
 
 ---
 
