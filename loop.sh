@@ -30,8 +30,8 @@ LOOP_OUTPUT_DIR="$SCRIPT_DIR/loop-output"
 if [ -n "$PRD_PATH" ]; then
   PRD_FILE="$PRD_PATH"
 elif [ -d "$LOOP_OUTPUT_DIR" ]; then
-  # Find the most recent prd-*.json in loop-output/
-  LATEST_PRD=$(ls -t "$LOOP_OUTPUT_DIR"/prd-*.json 2>/dev/null | head -1)
+  # Find the highest-revision *-prd-*.json in loop-output/
+  LATEST_PRD=$(ls -t "$LOOP_OUTPUT_DIR"/*-prd-*.json 2>/dev/null | head -1)
   if [ -n "$LATEST_PRD" ]; then
     PRD_FILE="$LATEST_PRD"
   else

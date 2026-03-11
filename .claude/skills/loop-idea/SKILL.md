@@ -43,7 +43,7 @@ A concept document that:
 - Is accessible to anyone, regardless of background
 - Contains no implementation details, architecture, or technical jargon
 
-The document will be saved to `loop-output/concept-[timestamp].md` for you to keep, refine, or build from.
+The document will be saved to `loop-output/[slug]-concept-0A.md` (e.g., `draft-feedback-concept-0A.md`) for you to keep, refine, or build from.
 
 ## Skill Workflow
 
@@ -124,11 +124,12 @@ You are facilitating a brainstorming session that leads to a high-quality concep
 - **Length** — 300–600 words is typical; go longer if the idea is complex, shorter if it's simple
 
 **After you write:**
-1. Save to `loop-output/concept-[ISO-timestamp].md` (e.g., `concept-2025-06-15T14-32-18Z.md`)
-2. Show the user the document
-3. Ask if they want to refine, expand, or if it captures the idea
-4. If they want changes, make them collaboratively
-5. When satisfied, confirm it's saved and done
+1. Follow the **Document Revision Rules** (see below) to derive the slug and determine the correct filename
+2. Save to `loop-output/` with the slug and revision (e.g., `draft-feedback-concept-0A.md`)
+3. Show the user the document
+4. Ask if they want to refine, expand, or if it captures the idea
+5. If they want changes, create a NEW file with the next minor revision (e.g., `draft-feedback-concept-0B.md`) — never overwrite
+6. When satisfied, confirm it's saved and done
 
 ### Tone & Principles
 
@@ -165,13 +166,62 @@ You are facilitating a brainstorming session that leads to a high-quality concep
 
 ---
 
+## Document Naming and Revision Rules
+
+All output files use a **slug prefix** and **revision suffix**. There are NO timestamps in filenames. All naming is kebab-case (hyphens only, no underscores).
+
+### Naming Convention
+
+Files are named: `[slug]-[artifact]-[major][minor].[ext]`
+
+- **Slug**: A short, readable, kebab-case identifier derived from the idea (2–4 words max)
+- **Artifact**: The document type (`concept`, `prd`, `spec`, etc.)
+- **Major revision**: A number starting at `0`
+- **Minor revision**: An uppercase letter starting at `A`
+
+Examples: `draft-feedback-concept-0A.md`, `task-status-concept-0A.md`, `ai-code-review-concept-0B.md`
+
+### Deriving the Slug (Concept Stage Only)
+
+The slug is created **only during the concept stage** (this skill). It becomes the permanent identifier for all artifacts in the pipeline. Downstream skills (prd, spec, task, evaluate) inherit the slug from the concept file — they do not create new slugs.
+
+**How to derive the slug:**
+1. After the brainstorming phase, distill the idea into 2–4 kebab-case words
+2. The slug should be human-readable and describe the idea at a glance
+3. Keep it short — it will prefix every artifact in the chain
+
+**Good slugs:** `draft-feedback`, `task-status`, `ai-code-review`, `notification-system`
+**Bad slugs:** `my-idea`, `project-1`, `thing`, `the-tool-for-getting-feedback-on-writing-drafts`
+
+### Revision Rules
+
+1. **Creating a new document (no prior versions exist):** Scan `loop-output/` for any existing files matching `[slug]-concept-*`. If none exist, use revision `-0A`.
+   - Example: No concept files with this slug exist → save as `draft-feedback-concept-0A.md`
+
+2. **Modifying an existing document:** NEVER overwrite an existing file. Always create a NEW file with the next successive minor revision letter.
+   - `draft-feedback-concept-0A.md` exists → create `draft-feedback-concept-0B.md`
+   - `draft-feedback-concept-0B.md` exists → create `draft-feedback-concept-0C.md`
+   - Minor revisions go A through Z
+
+3. **How to determine the next revision:** Before writing output, scan `loop-output/` for all files matching `[slug]-concept-*`. Find the file with the highest revision suffix. Increment the minor letter by one. If the highest is `-0A`, the next is `-0B`.
+
+4. **All revisions are kept.** Never delete or overwrite previous revision files. All revisions remain in `loop-output/`.
+
+5. **Major revision bumps** (e.g., `-0Z` → `-1A`) are only performed when explicitly requested by the user. Agents do not auto-increment the major revision number.
+
+### Output Path
+
+Save to: `loop-output/[slug]-concept-[rev].md` (e.g., `loop-output/draft-feedback-concept-0A.md`)
+
+---
+
 ## Notes for Skill Implementers
 
 - **Context: fork** is set so this skill runs in a subagent context, keeping the main conversation clean
 - The brainstorming phase should feel natural and conversational, not robotic
 - The concept document is the deliverable; everything else is the path to get there
 - If the user's idea is technically infeasible or unethical, surface that gently and explore what they're really trying to do
-- Always save the final document to `loop-output/` so the user has a persistent artifact
+- Always save the final document to `loop-output/` following the Document Revision Rules
 - Should feel like one coherent thought, not a checklist
 - Write out anti-patterns
 - Ensure to confirm with the user "Out of Scope" / "What It Is Not"

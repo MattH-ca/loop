@@ -18,18 +18,18 @@ Evaluate a completed Loop autonomous execution run. Generate a closing report on
 3. **Phase 1 (Closing Report):** Analyze execution artifacts and generate a performance report
 4. **Phase 2 (Spec Audit):** Point-by-point comparison of spec vs actual implementation with scoring
 5. **Phase 3 (Promotion Decision):** Promote spec to `finalspec` if audit passes, or present deductions
-6. Output closing report to `loop-output/closing-report-[ISO-date].md`
-7. Output `finalspec` to `loop-output/finalspec-[matching-spec-timestamp].md` if promoted
+6. Output closing report to `loop-output/` following Document Naming and Revision Rules (e.g., `task-status-closing-report-0A.md`)
+7. Output `finalspec` to `loop-output/` following Document Naming and Revision Rules (e.g., `task-status-finalspec-0A.md`) if promoted
 
 ---
 
 ## Input Chaining
 
-On invocation, scan `loop-output/` for these artifacts:
+On invocation, scan `loop-output/` for these artifacts. For each artifact type, find the one with the highest revision suffix (e.g., `-0C` is higher than `-0A`). **Extract the slug** from any found artifact filename (everything before the artifact type, e.g., `task-status` from `task-status-spec-0A.md`).
 
 ### Required
-- Most recent `spec-*.md` — the specification given to execution agents
-- Most recent `prd-*.json` — the task file with user stories
+- Highest-revision `*-spec-*.md` — the specification given to execution agents
+- Highest-revision `*-prd-*.json` — the task file with user stories
 
 ### Required from target codebase
 - `progress.txt` — the execution progress log with iteration details
@@ -37,9 +37,9 @@ On invocation, scan `loop-output/` for these artifacts:
 - All test files
 
 ### Optional
-- `prd-*.md` — the original PRD (for context)
+- Highest-revision `*-prd-*.md` — the original PRD (for context)
 - Screenshot evidence (if user provides)
-- `finalspec-*.md` — if one already exists, this is a re-evaluation
+- `*-finalspec-*.md` — if one already exists, this is a re-evaluation
 
 **If spec or prd.json not found:**
 - Ask the user to point to the artifacts. This skill cannot run without a spec to audit against.
@@ -104,10 +104,10 @@ Read these sources in parallel:
 
 | Phase | Artifact | Mode |
 |-------|----------|------|
-| **loop-idea** | `concept-*.md` | Interactive brainstorm |
-| **loop-prd** | `prd-*.md` | Interactive PRD |
-| **loop-spec** | `spec-*.md` | Technical spec with research |
-| **loop-task** | `prd-*.json` | Executable stories |
+| **loop-idea** | `[slug]-concept-*.md` | Interactive brainstorm |
+| **loop-prd** | `[slug]-prd-*.md` | Interactive PRD |
+| **loop-spec** | `[slug]-spec-*.md` | Technical spec with research |
+| **loop-task** | `[slug]-prd-*.json` | Executable stories |
 
 ---
 
@@ -252,7 +252,7 @@ Classify each finding as one of:
 ```markdown
 ## Spec vs Implementation Audit
 
-**Spec:** `loop-output/spec-[timestamp].md`
+**Spec:** `loop-output/[slug]-spec-[rev].md`
 **Codebase:** [path]
 **Scoring:** 100-point scale across 8 spec sections
 
@@ -304,9 +304,10 @@ Classify each finding as one of:
 
 ### If score = 100/100 (zero deductions)
 
-1. Copy spec to `loop-output/finalspec-[same-timestamp-as-spec].md`
-2. Change `**Status:** Draft` to `**Status:** Final` in the finalspec
-3. Report: "Spec promoted to finalspec. Zero deductions — implementation matches specification exactly."
+1. Create `loop-output/[slug]-finalspec-0A.md` (following Document Naming and Revision Rules — scan for existing `[slug]-finalspec-*` files first)
+2. Copy spec content into the new finalspec file
+3. Change `**Status:** Draft` to `**Status:** Final` in the finalspec
+4. Report: "Spec promoted to finalspec. Zero deductions — implementation matches specification exactly."
 
 ### If score >= 90/100 (minor deductions only)
 
@@ -334,25 +335,54 @@ Do NOT auto-promote. The user decides.
 
 ---
 
-## Output Locations
+## Document Naming and Revision Rules
+
+All output files use a **slug prefix** and **revision suffix**. There are NO timestamps in filenames. All naming is kebab-case (hyphens only, no underscores).
+
+### Naming Convention
+
+Files are named: `[slug]-[artifact]-[major][minor].[ext]`
+
+- **Slug**: Inherited from the spec/PRD filename (everything before `-spec-` or `-prd-`). The slug is the permanent identifier shared by all artifacts in the pipeline.
+- **Artifact**: `closing-report` or `finalspec`
+- **Major revision**: A number starting at `0`
+- **Minor revision**: An uppercase letter starting at `A`
+
+Examples: `task-status-closing-report-0A.md`, `task-status-finalspec-0A.md`
+
+### Revision Rules
+
+1. **Creating a new document (no prior versions exist):** Scan `loop-output/` for any existing files matching `[slug]-closing-report-*` or `[slug]-finalspec-*`. If none exist, use revision `-0A`.
+   - Example: Slug is `task-status`, no closing report files → save as `task-status-closing-report-0A.md`
+   - Example: Slug is `task-status`, no finalspec files → save as `task-status-finalspec-0A.md`
+
+2. **Modifying an existing document:** NEVER overwrite an existing file. Always create a NEW file with the next successive minor revision letter.
+   - `task-status-closing-report-0A.md` exists → create `task-status-closing-report-0B.md`
+   - Minor revisions go A through Z
+
+3. **How to determine the next revision:** Before writing output, scan `loop-output/` for all files matching `[slug]-[artifact]-*`. Find the file with the highest revision suffix. Increment the minor letter by one.
+
+4. **All revisions are kept.** Never delete or overwrite previous revision files. All revisions remain in `loop-output/`.
+
+5. **Major revision bumps** (e.g., `-0Z` → `-1A`) are only performed when explicitly requested by the user. Agents do not auto-increment the major revision number.
+
+### Output Paths
 
 | Artifact | Path | When |
 |----------|------|------|
-| Closing Report | `loop-output/closing-report-[ISO-date].md` | Always |
-| Final Spec | `loop-output/finalspec-[spec-timestamp].md` | When promoted |
-
-The finalspec timestamp matches the original spec's timestamp (not the current time) — this preserves traceability back to the spec that was used during execution.
+| Closing Report | `loop-output/[slug]-closing-report-[rev].md` | Always |
+| Final Spec | `loop-output/[slug]-finalspec-[rev].md` | When promoted |
 
 ---
 
 ## Checklist Before Completing
 
-- [ ] **Input chaining**: found spec, prd.json, progress.txt, and target codebase
+- [ ] **Input chaining**: found highest-revision spec, prd JSON, progress.txt, and target codebase
 - [ ] **Closing report**: all iterations accounted for, line counts verified, recommendations specific
 - [ ] **Audit**: every spec section scored, every source file read (not sampled)
 - [ ] **Deductions**: each one cites the specific spec line/section and the specific code location
 - [ ] **Enhancements**: agent bonus work acknowledged (no penalty)
 - [ ] **Spec bugs**: agent fixes acknowledged (no penalty)
 - [ ] **Promotion decision**: presented with correct framing (code gaps vs spec gaps)
-- [ ] **Closing report saved** to `loop-output/closing-report-[ISO-date].md`
-- [ ] **Finalspec saved** (if promoted) to `loop-output/finalspec-[spec-timestamp].md` with Status: Final
+- [ ] **Closing report saved** following Document Revision Rules
+- [ ] **Finalspec saved** (if promoted) following Document Revision Rules with Status: Final

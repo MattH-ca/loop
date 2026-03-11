@@ -12,7 +12,7 @@ Converts existing PRDs (and optional specs) to the prd.json format that Loop use
 ## The Job
 
 1. Check for prior artifacts (input chaining — see below)
-2. Take a PRD and optional spec and convert to `prd.json` in `loop-output/`
+2. Take a PRD and optional spec and convert to `[slug]-prd-[rev].json` in `loop-output/`
 3. Add `references` pointing to relevant spec sections
 4. Pre-populate `notes` with implementation hints from the spec
 
@@ -20,12 +20,13 @@ Converts existing PRDs (and optional specs) to the prd.json format that Loop use
 
 ## Input Chaining
 
-On invocation, scan `loop-output/` for the most recent `prd-*.md` AND `spec-*.md` files.
+On invocation, scan `loop-output/` for existing `*-prd-*.md` and `*-spec-*.md` files. For each artifact type, find the one with the highest revision suffix (e.g., `-0C` is higher than `-0A`).
 
 **If found:**
-1. Show the filenames and dates to the user (e.g., "I found `prd-2025-06-15T14-32-18Z.md` and `spec-2025-06-15T15-00-00Z.md`. Use these?")
+1. Show the filenames and revisions to the user (e.g., "I found `task-status-prd-0B.md` (revision 0B) and `task-status-spec-0A.md` (revision 0A). Use these?")
 2. If confirmed, read both artifacts as input
-3. Also check for a recent `concept-*.md` for additional context
+3. **Extract the slug** from the PRD filename (everything before `-prd-`). This slug will be used for the JSON output filename.
+4. Also check for the highest-revision `[slug]-concept-*` file for additional context
 
 **If PRD found but no spec:**
 - Proceed with just the PRD. The `references` field will be empty arrays and `notes` will be minimal.
@@ -53,8 +54,8 @@ On invocation, scan `loop-output/` for the most recent `prd-*.md` AND `spec-*.md
         "Typecheck passes"
       ],
       "references": [
-        "loop-output/spec-TIMESTAMP.md#data-model",
-        "loop-output/spec-TIMESTAMP.md#api-contracts"
+        "loop-output/task-status-spec-0A.md#data-model",
+        "loop-output/task-status-spec-0A.md#api-contracts"
       ],
       "notes": "Implementation hint from spec: use pgEnum for status field. Follow existing Card component pattern.",
       "priority": 1,
@@ -66,7 +67,7 @@ On invocation, scan `loop-output/` for the most recent `prd-*.md` AND `spec-*.md
 
 ### Field Details
 
-- **references**: Array of markdown anchor references pointing to relevant spec sections. Format: `"loop-output/spec-TIMESTAMP.md#section-anchor"`. Empty array if no spec available.
+- **references**: Array of markdown anchor references pointing to relevant spec sections. Format: `"loop-output/[slug]-spec-[rev].md#section-anchor"` (e.g., `"loop-output/task-status-spec-0A.md#data-model"`). Empty array if no spec available.
 - **notes**: Pre-populated with implementation hints derived from the spec (e.g., "Use Drizzle migration pattern", "Component follows existing Card pattern"). Executing agents append their own learnings during implementation. Empty string if no spec available.
 
 ---
@@ -150,13 +151,13 @@ When a spec is available, link each story to the relevant spec sections:
 
 1. Read the spec and identify section anchors (e.g., `#data-model`, `#api-contracts`, `#component-structure`)
 2. For each story, determine which spec sections are most relevant
-3. Add those as entries in the `references` array
+3. Add those as entries in the `references` array, using the spec's actual revision-based filename
 
 **Example:**
 ```json
 "references": [
-  "loop-output/spec-2025-06-15T15-00-00Z.md#data-model",
-  "loop-output/spec-2025-06-15T15-00-00Z.md#api-contracts"
+  "loop-output/task-status-spec-0A.md#data-model",
+  "loop-output/task-status-spec-0A.md#api-contracts"
 ]
 ```
 
@@ -208,18 +209,48 @@ Each is one focused change that can be completed and verified independently.
 
 ---
 
-## Output Location
+## Document Naming and Revision Rules
 
-Save to: `loop-output/prd-[ISO-timestamp].json` (e.g., `loop-output/prd-2025-06-15T16-00-00Z.json`)
+All output files use a **slug prefix** and **revision suffix**. There are NO timestamps in filenames. All naming is kebab-case (hyphens only, no underscores).
+
+### Naming Convention
+
+Files are named: `[slug]-[artifact]-[major][minor].[ext]`
+
+- **Slug**: Inherited from the PRD filename (everything before `-prd-`). The slug is the permanent identifier shared by all artifacts in the pipeline.
+- **Artifact**: `prd` (the JSON version shares the same artifact name as the markdown PRD)
+- **Major revision**: A number starting at `0`
+- **Minor revision**: An uppercase letter starting at `A`
+
+Examples: `task-status-prd-0A.json`, `draft-feedback-prd-0B.json`
+
+### Revision Rules
+
+1. **Creating a new document (no prior versions exist):** Scan `loop-output/` for any existing files matching `[slug]-prd-*.json`. If none exist, use revision `-0A`.
+   - Example: Slug is `task-status`, no JSON files with that slug → save as `task-status-prd-0A.json`
+
+2. **Modifying an existing document:** NEVER overwrite an existing file. Always create a NEW file with the next successive minor revision letter.
+   - `task-status-prd-0A.json` exists → create `task-status-prd-0B.json`
+   - Minor revisions go A through Z
+
+3. **How to determine the next revision:** Before writing output, scan `loop-output/` for all files matching `[slug]-prd-*.json`. Find the file with the highest revision suffix. Increment the minor letter by one.
+
+4. **All revisions are kept.** Never delete or overwrite previous revision files. All revisions remain in `loop-output/`.
+
+5. **Major revision bumps** (e.g., `-0Z` → `-1A`) are only performed when explicitly requested by the user. Agents do not auto-increment the major revision number.
+
+### Output Path
+
+Save to: `loop-output/[slug]-prd-[rev].json` (e.g., `loop-output/task-status-prd-0A.json`)
 
 ---
 
 ## Example
 
-**Input PRD:** `loop-output/prd-2025-06-15T14-32-18Z.md`
-**Input Spec:** `loop-output/spec-2025-06-15T15-00-00Z.md`
+**Input PRD:** `loop-output/task-status-prd-0A.md`
+**Input Spec:** `loop-output/task-status-spec-0A.md`
 
-**Output `loop-output/prd-2025-06-15T16-00-00Z.json`:**
+**Output:** `loop-output/task-status-prd-0A.json`
 ```json
 {
   "project": "TaskApp",
@@ -236,7 +267,7 @@ Save to: `loop-output/prd-[ISO-timestamp].json` (e.g., `loop-output/prd-2025-06-
         "Typecheck passes"
       ],
       "references": [
-        "loop-output/spec-2025-06-15T15-00-00Z.md#data-model"
+        "loop-output/task-status-spec-0A.md#data-model"
       ],
       "notes": "Use Drizzle pgEnum() for the status column. See spec research note on native PostgreSQL enum support.",
       "priority": 1,
@@ -253,7 +284,7 @@ Save to: `loop-output/prd-[ISO-timestamp].json` (e.g., `loop-output/prd-2025-06-
         "Verify in browser using dev-browser skill"
       ],
       "references": [
-        "loop-output/spec-2025-06-15T15-00-00Z.md#component-structure"
+        "loop-output/task-status-spec-0A.md#component-structure"
       ],
       "notes": "Follow existing Card component pattern. StatusBadge goes in components/tasks/.",
       "priority": 2,
@@ -271,8 +302,8 @@ Save to: `loop-output/prd-[ISO-timestamp].json` (e.g., `loop-output/prd-2025-06-
         "Verify in browser using dev-browser skill"
       ],
       "references": [
-        "loop-output/spec-2025-06-15T15-00-00Z.md#api-contracts",
-        "loop-output/spec-2025-06-15T15-00-00Z.md#component-structure"
+        "loop-output/task-status-spec-0A.md#api-contracts",
+        "loop-output/task-status-spec-0A.md#component-structure"
       ],
       "notes": "Use PATCH /api/tasks/:id/status endpoint defined in spec. StatusDropdown component.",
       "priority": 3,
@@ -289,8 +320,8 @@ Save to: `loop-output/prd-[ISO-timestamp].json` (e.g., `loop-output/prd-2025-06-
         "Verify in browser using dev-browser skill"
       ],
       "references": [
-        "loop-output/spec-2025-06-15T15-00-00Z.md#component-structure",
-        "loop-output/spec-2025-06-15T15-00-00Z.md#state-management"
+        "loop-output/task-status-spec-0A.md#component-structure",
+        "loop-output/task-status-spec-0A.md#state-management"
       ],
       "notes": "Use URL search params for filter state. See spec state management section.",
       "priority": 4,
@@ -304,23 +335,23 @@ Save to: `loop-output/prd-[ISO-timestamp].json` (e.g., `loop-output/prd-2025-06-
 
 ## Archiving Previous Runs
 
-**Before writing a new prd.json, check if there is an existing one from a different feature:**
+**Before writing a new prd JSON, check if there is an existing one from a different feature:**
 
-1. Read the current prd.json in `loop-output/` if it exists
+1. Read the highest-revision `*-prd-*.json` in `loop-output/` if it exists
 2. Check if `branchName` differs from the new feature's branch name
 3. If different AND `progress.txt` has content beyond the header:
-   - Create archive folder: `archive/YYYY-MM-DD-feature-name/`
-   - Copy current prd.json and `progress.txt` to archive
+   - Create archive folder: `archive/[feature-name]/`
+   - Copy all `[slug]-prd-*.json` revisions and `progress.txt` to archive
    - Reset `progress.txt` with fresh header
 
 ---
 
 ## Checklist Before Saving
 
-Before writing prd.json, verify:
+Before writing prd JSON, verify:
 
-- [ ] **Input chaining**: checked for PRD and spec in `loop-output/`
-- [ ] **Previous run archived** (if prd.json exists with different branchName, archive it first)
+- [ ] **Input chaining**: checked for highest-revision PRD and spec in `loop-output/`
+- [ ] **Previous run archived** (if prd JSON exists with different branchName, archive it first)
 - [ ] Each story is completable in one iteration (small enough)
 - [ ] Stories are ordered by dependency (schema to backend to UI)
 - [ ] Every story has "Typecheck passes" as criterion
@@ -329,4 +360,4 @@ Before writing prd.json, verify:
 - [ ] No story depends on a later story
 - [ ] `references` populated from spec (or empty arrays if no spec)
 - [ ] `notes` pre-populated with implementation hints (or empty strings if no spec)
-- [ ] Output saved to `loop-output/prd-[ISO-timestamp].json`
+- [ ] Output saved following Document Revision Rules

@@ -4,7 +4,7 @@ You are an autonomous coding agent working on a software project.
 
 ## Your Task
 
-1. Read the PRD — check `loop-output/` for the most recent `prd-*.json` file (e.g., `loop-output/prd-2025-06-15T16-00-00Z.json`). Fall back to `prd.json` in the project root if not found.
+1. Read the PRD — check `loop-output/` for the highest-revision `*-prd-*.json` file (e.g., `loop-output/task-status-prd-0A.json`). Find the file with the highest revision suffix. Fall back to `prd.json` in the project root if not found.
 2. Read the progress log at `progress.txt` (check Codebase Patterns section first)
 3. Check you're on the correct branch from PRD `branchName`. If not, check it out or create from main.
 4. Pick the **highest priority** user story where `passes: false`

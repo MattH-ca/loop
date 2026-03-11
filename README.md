@@ -64,22 +64,22 @@ flowchart TD
 
 | # | Skill | Mode | Input | Output |
 |---|-------|------|-------|--------|
-| 1 | `loop-idea` | Interactive | Your rough idea | `loop-output/concept-[timestamp].md` |
-| 2 | `loop-prd` | Interactive | Concept doc + your answers | `loop-output/prd-[timestamp].md` |
-| 3 | `loop-spec` | Interactive → Research → Output | PRD + codebase + research | `loop-output/spec-[timestamp].md` |
-| 4 | `loop-task` | Autonomous | PRD + spec | `loop-output/prd-[timestamp].json` |
+| 1 | `loop-idea` | Interactive | Your rough idea | `loop-output/[slug]-concept-0A.md` |
+| 2 | `loop-prd` | Interactive | Concept doc + your answers | `loop-output/[slug]-prd-0A.md` |
+| 3 | `loop-spec` | Interactive → Research → Output | PRD + codebase + research | `loop-output/[slug]-spec-0A.md` |
+| 4 | `loop-task` | Autonomous | PRD + spec | `loop-output/[slug]-prd-0A.json` |
 
 ### Skill 1: `loop-idea` — Brainstorm
 
 Turns a vague idea into a clear concept document through guided dialogue. The agent asks 6–7 focused questions — one at a time, with multiple-choice options when helpful — covering the core concept, problem, audience, distinctiveness, and trade-offs. You end up with a plain-English document that anyone can read.
 
-**Output:** `loop-output/concept-[timestamp].md`
+**Output:** `loop-output/[slug]-concept-0A.md` (e.g., `draft-feedback-concept-0A.md`)
 
 ### Skill 2: `loop-prd` — Product Requirements
 
 Creates a structured Product Requirements Document. Picks up the concept doc if one exists, then asks iterative questions about goals, scope, timeline, constraints, success metrics, and quality gate intent. The quality gate question is required — it captures what standards every story must meet (type checking, linting, tests, visual verification) without specifying exact commands yet.
 
-**Output:** `loop-output/prd-[timestamp].md` with user stories, acceptance criteria, functional requirements, and quality gate intent.
+**Output:** `loop-output/[slug]-prd-0A.md` (e.g., `draft-feedback-prd-0A.md`) with user stories, acceptance criteria, functional requirements, and quality gate intent.
 
 ### Skill 3: `loop-spec` — Technical Specification
 
@@ -89,20 +89,20 @@ Transforms the PRD into a technical implementation spec. Runs in three phases:
 2. **Autonomous research** — Uses the Context7 MCP server to query live library documentation and web search to validate technical decisions. Finds current best practices, version-specific patterns, and integration approaches.
 3. **Output** — Produces a spec with architecture, data models, API contracts, component structure, error handling, testing strategy, and security considerations. Research findings are embedded inline (no separate research doc). Quality gate intent from the PRD gets translated into specific commands for the project's tech stack (e.g., "must pass type checking" → `pnpm typecheck`).
 
-**Output:** `loop-output/spec-[timestamp].md`
+**Output:** `loop-output/[slug]-spec-0A.md` (e.g., `draft-feedback-spec-0A.md`)
 
 ### Skill 4: `loop-task` — Task Conversion
 
 Converts the PRD + spec into the `prd.json` format that `loop.sh` consumes. Each user story becomes a JSON entry with:
 
-- **`references`** — Links to relevant spec sections (e.g., `spec-TIMESTAMP.md#data-model`) so executing agents can look up technical details.
+- **`references`** — Links to relevant spec sections (e.g., `task-status-spec-0A.md#data-model`) so executing agents can look up technical details.
 - **`notes`** — Pre-populated implementation hints from the spec (e.g., "Use Drizzle pgEnum for status column").
 - **`priority`** — Dependency-ordered. Schema changes first, then backend logic, then UI.
 - **`passes: false`** — Every story starts unfinished.
 
 The key constraint: each story must be completable in **one Loop iteration** (one context window). If a story is too big, the agent runs out of context before finishing. Rule of thumb: if you can't describe the change in 2–3 sentences, split it.
 
-**Output:** `loop-output/prd-[timestamp].json`
+**Output:** `loop-output/[slug]-prd-0A.json` (e.g., `draft-feedback-prd-0A.json`)
 
 ---
 
@@ -148,7 +148,7 @@ When `loop.sh` detects a different `branchName` than the last run, it archives t
 
 | # | Skill | Mode | Input | Output |
 |---|-------|------|-------|--------|
-| 6 | `loop-evaluate` | Autonomous | spec + prd.json + progress.txt + codebase | `loop-output/closing-report-[date].md` + optional `finalspec` |
+| 6 | `loop-evaluate` | Autonomous | spec + prd.json + progress.txt + codebase | `loop-output/[slug]-closing-report-[rev].md` + optional `[slug]-finalspec-[rev].md` |
 
 An optional skill you run after all stories are complete. It performs three phases:
 
@@ -175,7 +175,7 @@ Deviations are classified: **Match**, **Enhancement** (agent added beyond spec �
 
 ### Phase 3: Promotion Decision
 
-- **100/100** — Spec is auto-promoted to `finalspec-[timestamp].md` with status changed to Final.
+- **100/100** — Spec is auto-promoted to `[slug]-finalspec-0A.md` with status changed to Final.
 - **90–99** — Deductions are presented as code bugs (not spec bugs). User decides whether to promote.
 - **< 90** — Recommendation to fix deviations in a follow-up Loop cycle before promoting.
 
@@ -187,12 +187,12 @@ A complete Loop run produces these artifacts in `loop-output/`:
 
 ```
 loop-output/
-├── concept-2026-02-07T01-06-54Z.md          # Skill 1: idea → concept
-├── prd-2026-02-07T02-10-16Z.md              # Skill 2: concept → PRD
-├── spec-2026-02-07T02-27-20Z.md             # Skill 3: PRD → spec
-├── prd-2026-02-07T03-00-00Z.json            # Skill 4: spec → executable tasks
-├── closing-report-2026-02-07.md             # Skill 6: post-execution report
-└── finalspec-2026-02-07T02-27-20Z.md        # Skill 6: promoted spec (if audit passes)
+├── task-status-concept-0A.md                  # Skill 1: idea → concept
+├── task-status-prd-0A.md                     # Skill 2: concept → PRD
+├── task-status-spec-0A.md                    # Skill 3: PRD → spec
+├── task-status-prd-0A.json                   # Skill 4: spec → executable tasks
+├── task-status-closing-report-0A.md          # Skill 6: post-execution report
+└── task-status-finalspec-0A.md               # Skill 6: promoted spec (if audit passes)
 ```
 
 Each artifact is immutable once created. The timestamp preserves the order and traceability. The `finalspec` timestamp matches its source spec (not the evaluation date) so you can always trace back.
@@ -212,7 +212,7 @@ Each artifact is immutable once created. The timestamp preserves the order and t
       "title": "Story title",
       "description": "As a [user], I want [feature] so that [benefit]",
       "acceptanceCriteria": ["Criterion 1", "Typecheck passes"],
-      "references": ["loop-output/spec-TIMESTAMP.md#section"],
+      "references": ["loop-output/task-status-spec-0A.md#section"],
       "notes": "Implementation hints from spec.",
       "priority": 1,
       "passes": false

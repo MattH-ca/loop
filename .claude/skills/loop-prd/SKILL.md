@@ -2,7 +2,7 @@
 name: loop-prd
 description: "Create a PRD through interactive questioning (use question mode whenever possible) for the Loop autonomous agent system. Use when the user wants to create a PRD, write product requirements, define a feature spec, or mentions 'user stories', 'acceptance criteria', or 'product requirements document'. Triggers on: create a prd, write requirements for, define this feature, I need a prd for, help me spec out."
 model: opus
-argument-hint: "path/to/concept-*.md"
+argument-hint: "path/to/[slug]-concept-*.md"
 ---
 
 # Loop PRD Creator
@@ -28,11 +28,12 @@ Create structured PRDs through adaptive questioning. The output PRD is designed 
 
 ## Input Chaining
 
-On invocation, use $ARGUMENTS if not present then scan `loop-output/` for the most recent `concept-*.md` file.
+On invocation, use $ARGUMENTS if not present then scan `loop-output/` for existing `*-concept-*.md` files. Find the one with the highest revision suffix (e.g., `-0C` is higher than `-0A`).
 
 **If found:**
-1. Show the filename and date to the user (e.g., "I found `concept-2025-06-15T14-32-18Z.md` from June 15. Use this as context?")
+1. Show the filename and revision to the user (e.g., "I found `draft-feedback-concept-0B.md` (revision 0B). Use this as context?")
 2. If confirmed, read the concept document and use it as context
+3. **Extract the slug** from the concept filename (everything before `-concept-`). This slug will be used for the PRD filename. For example, if the concept is `draft-feedback-concept-0B.md`, the slug is `draft-feedback`.
 
 **If not found:**
 - Explain to the User there is no argument.
@@ -165,9 +166,43 @@ The PRD will be executed by AI coding agents via Loop. Therefore:
 
 ---
 
-## Output Format
+## Document Naming and Revision Rules
 
-Save to: `loop-output/prd-[ISO-timestamp].md` (e.g., `loop-output/prd-2025-06-15T14-32-18Z.md`)
+All output files use a **slug prefix** and **revision suffix**. There are NO timestamps in filenames. All naming is kebab-case (hyphens only, no underscores).
+
+### Naming Convention
+
+Files are named: `[slug]-[artifact]-[major][minor].[ext]`
+
+- **Slug**: Inherited from the concept document (extracted from its filename — everything before `-concept-`). The slug is the permanent identifier shared by all artifacts in the pipeline.
+- **Artifact**: `prd`
+- **Major revision**: A number starting at `0`
+- **Minor revision**: An uppercase letter starting at `A`
+
+Examples: `draft-feedback-prd-0A.md`, `task-status-prd-0B.md`
+
+### Revision Rules
+
+1. **Creating a new document (no prior versions exist):** Scan `loop-output/` for any existing files matching `[slug]-prd-*.md`. If none exist, use revision `-0A`.
+   - Example: Slug is `draft-feedback`, no PRD files with that slug → save as `draft-feedback-prd-0A.md`
+
+2. **Modifying an existing document:** NEVER overwrite an existing file. Always create a NEW file with the next successive minor revision letter.
+   - `draft-feedback-prd-0A.md` exists → create `draft-feedback-prd-0B.md`
+   - Minor revisions go A through Z
+
+3. **How to determine the next revision:** Before writing output, scan `loop-output/` for all files matching `[slug]-prd-*.md`. Find the file with the highest revision suffix. Increment the minor letter by one.
+
+4. **All revisions are kept.** Never delete or overwrite previous revision files. All revisions remain in `loop-output/`.
+
+5. **Major revision bumps** (e.g., `-0Z` → `-1A`) are only performed when explicitly requested by the user. Agents do not auto-increment the major revision number.
+
+### Output Path
+
+Save to: `loop-output/[slug]-prd-[rev].md` (e.g., `loop-output/draft-feedback-prd-0A.md`)
+
+---
+
+## Output Structure
 
 ```markdown
 # PRD: Feature Name
@@ -196,5 +231,3 @@ Save to: `loop-output/prd-[ISO-timestamp].md` (e.g., `loop-output/prd-2025-06-15
 ## Open Questions
 ...
 ```
-
-

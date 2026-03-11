@@ -19,7 +19,7 @@ Transform a PRD into a technical implementation specification with embedded rese
 4. **Phase 2 (Autonomous):** Research technical decisions using Context7 MCP + WebSearch
 5. **Phase 3 (Output):** Produce a single spec with research findings embedded inline
 6. Translate quality gate intent from PRD into specific commands
-7. Output to `loop-output/spec-[ISO-timestamp].md`
+7. Output to `loop-output/` following Document Naming and Revision Rules (e.g., `task-status-spec-0A.md`)
 
 **Important:** Do NOT start implementing. Just create the technical spec.
 
@@ -27,12 +27,13 @@ Transform a PRD into a technical implementation specification with embedded rese
 
 ## Input Chaining
 
-On invocation, scan `loop-output/` for the most recent `prd-*.md` file.
+On invocation, scan `loop-output/` for existing `*-prd-*.md` files. Find the one with the highest revision suffix (e.g., `-0C` is higher than `-0A`).
 
 **If found:**
-1. Show the filename and date to the user (e.g., "I found `prd-2025-06-15T14-32-18Z.md` from June 15. Use this as the basis for the spec?")
+1. Show the filename and revision to the user (e.g., "I found `draft-feedback-prd-0B.md` (revision 0B). Use this as the basis for the spec?")
 2. If confirmed, read the PRD and use it as the primary input
-3. Also check for a recent `concept-*.md` for additional context
+3. **Extract the slug** from the PRD filename (everything before `-prd-`). This slug will be used for the spec filename. For example, if the PRD is `draft-feedback-prd-0B.md`, the slug is `draft-feedback`.
+4. Also check for the highest-revision `[slug]-concept-*` file for additional context
 
 **If not found:**
 - Ask the user to provide a PRD or point to one. This skill needs a PRD to work from.
@@ -162,8 +163,7 @@ Include the resolved commands in the spec's Quality Gates section.
 # Technical Specification: [Feature Name]
 
 **Branch:** `loop/[feature-name]`
-**Date:** [YYYY-MM-DD]
-**PRD:** [path to PRD in loop-output/]
+**PRD:** [e.g., `loop-output/draft-feedback-prd-0A.md`]
 **Status:** Draft | Review | Approved
 
 ---
@@ -353,7 +353,7 @@ For UI stories, also include:
 
 Before saving, verify:
 
-- [ ] Input chaining: checked for PRD in `loop-output/`
+- [ ] Input chaining: checked for highest-revision PRD in `loop-output/`
 - [ ] All NEEDS CLARIFICATION resolved (max 3 asked as questions)
 - [ ] Research performed for non-obvious technical decisions
 - [ ] Research findings embedded inline (no separate research.md)
@@ -365,29 +365,49 @@ Before saving, verify:
 - [ ] Testing strategy covers acceptance criteria
 - [ ] Security considerations addressed
 - [ ] No vague statements ("works correctly", "handles errors")
-- [ ] Output saved to `loop-output/spec-[ISO-timestamp].md`
+- [ ] Output saved following Document Revision Rules
 
 ---
 
-## Output Location
+## Document Naming and Revision Rules
 
-Save to: `loop-output/spec-[ISO-timestamp].md` (e.g., `loop-output/spec-2025-06-15T14-32-18Z.md`)
+All output files use a **slug prefix** and **revision suffix**. There are NO timestamps in filenames. All naming is kebab-case (hyphens only, no underscores).
+
+### Naming Convention
+
+Files are named: `[slug]-[artifact]-[major][minor].[ext]`
+
+- **Slug**: Inherited from the PRD filename (everything before `-prd-`). The slug is the permanent identifier shared by all artifacts in the pipeline.
+- **Artifact**: `spec`
+- **Major revision**: A number starting at `0`
+- **Minor revision**: An uppercase letter starting at `A`
+
+Examples: `draft-feedback-spec-0A.md`, `task-status-spec-0B.md`
+
+### Revision Rules
+
+1. **Creating a new document (no prior versions exist):** Scan `loop-output/` for any existing files matching `[slug]-spec-*`. If none exist, use revision `-0A`.
+   - Example: Slug is `task-status`, no spec files with that slug → save as `task-status-spec-0A.md`
+
+2. **Modifying an existing document:** NEVER overwrite an existing file. Always create a NEW file with the next successive minor revision letter.
+   - `task-status-spec-0A.md` exists → create `task-status-spec-0B.md`
+   - Minor revisions go A through Z
+
+3. **How to determine the next revision:** Before writing output, scan `loop-output/` for all files matching `[slug]-spec-*`. Find the file with the highest revision suffix. Increment the minor letter by one.
+
+4. **All revisions are kept.** Never delete or overwrite previous revision files. All revisions remain in `loop-output/`.
+
+5. **Major revision bumps** (e.g., `-0Z` → `-1A`) are only performed when explicitly requested by the user. Agents do not auto-increment the major revision number.
+
+### Output Path
+
+Save to: `loop-output/[slug]-spec-[rev].md` (e.g., `loop-output/task-status-spec-0A.md`)
 
 ---
 
 ## Example: Task Status Feature
 
-**Input PRD excerpt:**
-```markdown
-## User Stories
-### US-001: Add status field to tasks table
-As a developer, I need to store task status in the database.
-
-## Quality Gate Intent
-- Must pass type checking
-- Must pass linting
-- UI stories must be visually verified
-```
+**Input PRD:** `loop-output/task-status-prd-0A.md`
 
 **Phase 1 — Clarification question:**
 ```
@@ -402,7 +422,7 @@ As a developer, I need to store task status in the database.
 - Context7: Query Drizzle docs for migration syntax
 - WebSearch: "Drizzle ORM enum column best practices 2026"
 
-**Phase 3 — Output spec excerpt:**
+**Phase 3 — Output:** `loop-output/task-status-spec-0A.md`
 ```markdown
 ## Technical Context
 
